@@ -1,1 +1,1 @@
-# semantic-distance
+# Semantic retrieval signature
