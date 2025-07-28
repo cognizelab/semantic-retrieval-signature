@@ -1,4 +1,4 @@
-Surface.rar: The semantic retrieval signature in CIFTI format across all participants for each trial.
+Surface: The semantic retrieval signature in CIFTI format across all participants for each trial.
 
 *   T-PLS (main predictive model based on Thresholded Partial Least Squares)
 
@@ -14,7 +14,7 @@ Surface.rar: The semantic retrieval signature in CIFTI format across all partici
     *   mask\_weight\_FDR05.dscalar.nii: The weight map surviving at the significance level of FDR p < 0.05.
     *   mask\_activation\_FDR05.dscalar.nii: The activation map surviving at the significance level of FDR p < 0.05.
 
-Volume.rar: The semantic retrieval signature in NIFTI format across all participants for each trial.
+Volume: The semantic retrieval signature in NIFTI format across all participants for each trial.
 
 *   T-PLS (main predictive model based on Thresholded Partial Least Squares)
 
