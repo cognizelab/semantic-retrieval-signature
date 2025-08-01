@@ -21,3 +21,6 @@ Volume: The semantic retrieval signature in NIFTI format across all participants
     *   z\_stat\_predictive\_weight\_map\_semantic\_retrieval\_signature.dscalar.nii: The Z-statistic map based on bootstrapped predictive weights.
     *   mask\_weight\_FDR05.dscalar.nii: The weight map surviving at the significance level of FDR p < 0.05.
 
+***
+
+Note: The two versions of neural signatures were derived by applying the same T-PLS model parameters separately to surface and volumetric spaces, resulting in distinct spatial implementations of the signature. No spatial transformation techniques were employed in this process.
