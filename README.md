@@ -8,7 +8,7 @@ Through the integration of computational linguistics with machine learning, this
 
 ## 1. A precise whole-brain topography of semantic retrieval demands
 
-[![A.png](https://i.postimg.cc/5yrBhxWF/A.png)](https://postimg.cc/dZ8Zdc1q)
+[![Figure-3-page-0001.jpg](https://i.postimg.cc/Y05PnZjp/Figure-3-page-0001.jpg)](https://postimg.cc/Wq7St9MK)
 
 The whole-brain semantic retrieval signature in CIFTI and NIFTI formats can be accessed in the "Semantic Retrieval Signature" folder. The stimulus materials used to construct this neural signature can be found in the "Word-pair Stimulus" folder.
 
