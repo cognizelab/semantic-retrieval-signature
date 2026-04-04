@@ -26,5 +26,5 @@ Information on the core brain regions (ROIs) within the semantic retrieval signa
 
 # Reference
 
-> Kaixiang, Z., Xinyu, L., Jonathan, S., Elizabeth, J. & Vatansever, D. (2025) Adaptive coordination between competing cognitive systems enables flexible retrieval of semantic knowledge.
+> Kaixiang, Z., Xinyu, L., Jonathan, S., Elizabeth, J. & Vatansever, D. (2026) Adaptive coordination between competing cognitive systems enables flexible retrieval of semantic knowledge.
 
