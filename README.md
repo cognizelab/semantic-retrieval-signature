@@ -1,6 +1,6 @@
 # Introduction
 
-The semantic retrieval signature described in "Organizational principles of semantic retrieval in the human cortex" is stored in this repository.
+The semantic retrieval signature described in "Adaptive coordination between competing cognitive systems enables flexible retrieval of semantic knowledge" is stored in this repository.
 
 Through the integration of computational linguistics with machine learning, this study identified a robust and generalizable semantic retrieval signature that is sensitive to word-pair semantic distance variations, where larger semantic distances correspond to increased controlled retrieval demands. This signature is specific to semantic processing rather than general executive control.
 
