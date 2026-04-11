@@ -8,4 +8,4 @@ Surface: The average beta map in CIFTI format across all participants for each t
 
 Volume: The average beta map in NIFTI format across all participants for each trial. &#x20;
 
-data\_word\_list.mat: The information of word pairs corresponding to each trial, semantic distance, and average response time.&#x20;
+data\_word\_list.mat: The information of word pairs corresponding to each trial.&#x20;
