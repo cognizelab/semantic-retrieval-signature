@@ -93,7 +93,6 @@ xlabel('Ture Value (each fold)', 'FontSize', 20);
 ylabel('Predicted Value (each fold)', 'FontSize', 20);
 
 %% Figure 6: bootstrap
-try
 if isfield(out,'boot_Z') && ~isempty(out.boot_Z)
     subplot(2,8,[12 15]); clear v;
     v = out.boot_Z; [a,b] = sort(v,'descend');
@@ -125,5 +124,4 @@ if isfield(out,'boot_Z') && ~isempty(out.boot_Z)
     ax =gca; ax.TickLength = [0.03 0.03];
     ylabel('Z', 'FontSize', 20);
     xlabel('Features', 'FontSize', 20);
-end
 end
