@@ -23,15 +23,16 @@ else
     curr_param.groupCV = []; curr_param.stratifyCV = []; curr_param.indexCV = []; curr_param.keepOrder = 0;
 end
 
-index = mat_sample(x,y,[],param.icv,curr_param);
+[index,icv] = mat_sample(x,y,[],param.icv,curr_param);
 
 %%
 if isfield(param,'po_tpls') && ~isempty(param.po_tpls) && param.po_tpls == 1
     CVfold = [];
     for i = 1:size(index,2)
-        curr = zeros(size(index,1),param.icv(1));
-        for j = 1:param.icv(1)
-           curr(index(:,i)==j,j) = 1; 
+        fold_values = unique(index(~isnan(index(:,i)),i));
+        curr = zeros(size(index,1),numel(fold_values));
+        for j = 1:numel(fold_values)
+           curr(index(:,i)==fold_values(j),j) = 1; 
         end
         CVfold = [CVfold,curr];
     end     
@@ -108,18 +109,24 @@ p1 = numel(param.compvec);
 p2 = numel(param.threshvec);
 betamap_folds = cell(p1,p2);
 
-for n = 1:param.icv(2)
+for n = 1:icv(2)
     idx = index(:,n); PV = cell(p1,p2); TV = PV;  PW = PV;
-    for k = 1:param.icv(1)
+    fold_values = unique(idx(~isnan(idx)));
+    for k = 1:numel(fold_values)
         % splitting data sets
-        ftest = find(idx==k); ftrain = find(idx~=k);
+        fold_value = fold_values(k);
+        if numel(fold_values) == 1 && fold_value == 0
+            ftest = (1:size(x,1))';
+            ftrain = ftest;
+        else
+            ftest = find(idx==fold_value);
+            ftrain = find(idx~=fold_value & ~isnan(idx));
+        end
         xtest = x(ftest,:); ytest = y(ftest,:); 
         xtrain = x(ftrain,:); ytrain = y(ftrain,:); 
         % feature scaling 
         if param.iscale == 1 
-            vmin = min(xtrain); vmax = max(xtrain); v = vmax-vmin;
-            xtrain = (xtrain - vmin) ./ v;
-            xtest = (xtest - vmin) ./ v;    
+            [xtrain,xtest] = mat_scale(xtrain,xtest);
         end
         % model training
         mdl = TPLS(xtrain,ytrain,max(param.compvec),ones(numel(ytrain),1),0);
@@ -131,7 +138,10 @@ for n = 1:param.icv(2)
                 betamap_folds{i,j} = [betamap_folds{i,j},betamap]; 
                 PW{i,j} = [PW{i,j};score]; TV{i,j} = [TV{i,j};ytest]; 
                 if numel(unique(y)) == 2
-                    PV{i,j} = PW{i,j} > 0.5;   
+                    class_labels = unique(y(:));
+                    class_threshold = mean(class_labels);
+                    PV{i,j} = class_labels(1) * ones(size(PW{i,j}));
+                    PV{i,j}(PW{i,j} > class_threshold) = class_labels(2);
                 else
                     PV{i,j} = PW{i,j};
                 end
@@ -141,10 +151,10 @@ for n = 1:param.icv(2)
     for i = 1:p1
         for j = 1:p2
             if numel(unique(y)) == 2
-                W = mat_assess_classification(logical(TV{i,j}),PW{i,j},1,param);
+                W = mat_assess_classification(TV{i,j},PW{i,j},1,param);
                 AUC(i,j,n) = W.AUC; accuracy(i,j,n) = W.accuracy;
             else
-                curr = mat_assess_correlation(PV{i,j},TV{i,j},param);
+                curr = mat_assess_correlation(TV{i,j},PV{i,j},param);
                 accuracy(i,j,n) = curr.accuracy;
                 MAE(i,j,n) = curr.MAE;
             end

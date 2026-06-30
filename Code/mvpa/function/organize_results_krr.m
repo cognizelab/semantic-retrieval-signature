@@ -1,17 +1,17 @@
-function out = organize_results_krr(model,opt_parameter,opt_records,out_train,out_apply,out_assess,out_assess_full)
+function out = organize_results_krr(~,opt_parameter,~,out_train,out_apply,out_assess,out_assess_full)
 
 if ~isempty(opt_parameter)
     out.opt_parameter = cell2mat(opt_parameter(:));
 end
 for i = 1:size(out_train,2)
-    TV = []; PV = [];
+    curr = [];
     for j = 1:size(out_train,1)
-        TV = [TV;out_apply{j,i}.tv]; PV = [PV;out_apply{j,i}.pv];
         curr(j,:) = [out_assess{j,i}.accuracy,out_assess{j,i}.R2,out_assess{j,i}.MAE,out_assess{j,i}.RMSE];  
     end
+    [TV,PV] = collect_ordered_outcomes(out_apply(:,i));
     out.TV(:,i) = TV; out.PV(:,i) = PV;
     currvalue(i,:) = [out_assess_full{i}.accuracy,out_assess_full{i}.R2,out_assess_full{i}.MAE,out_assess_full{i}.RMSE];  
-    currvalue_folds(i,:) = mean(curr);
+    currvalue_folds(i,:) = mean(curr,1);
 end
 
 currvalue = currvalue;

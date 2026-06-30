@@ -19,7 +19,7 @@ end
 
 function out_apply = apply_model_svr_curr(xtest,ytest,out_train,temporary_file)
 
-out_apply.pv = xtest * out_train.feature_weight;
+out_apply.pv = xtest * out_train.feature_weight + out_train.bias;
 out_apply.tv = ytest;
 out_apply.dp = out_apply.pv;
 

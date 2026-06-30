@@ -2,6 +2,7 @@ function out_apply = apply_model_svr(xtest,ytest,out_train,temporary_file)
 
 out_apply.pv = predict(temporary_file,xtest);
 out_apply.tv = ytest;
+out_apply.dp = [];
 
 if nargin > 3
     if strcmp(temporary_file.ModelParameters.KernelFunction,'linear')  

@@ -19,8 +19,10 @@ end
 
 function out_apply = apply_model_svm_curr(xtest,ytest,out_train,temporary_file)
 
-out_apply.pv = xtest * out_train.feature_weight;
+out_apply.dp = xtest * out_train.feature_weight + out_train.bias;
+class_labels = temporary_file.ClassNames;
+out_apply.pv = class_labels(1) * ones(size(out_apply.dp));
+out_apply.pv(out_apply.dp > 0) = class_labels(2);
 out_apply.tv = ytest;
-out_apply.dp = out_apply.pv;
 
 end

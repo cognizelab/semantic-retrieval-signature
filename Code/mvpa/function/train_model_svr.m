@@ -26,6 +26,11 @@ end
 
 temporary_file = out_svr;
 out_train.model = out_svr;
-out_train.feature_weight = out_svr.Beta;
-out_train.bias = out_svr.Bias;
+try
+    out_train.feature_weight = out_svr.Beta;
+    out_train.bias = out_svr.Bias;
+catch
+    out_train.feature_weight = NaN(size(xtrain,2),1);
+    out_train.bias = NaN;
+end
  

@@ -20,6 +20,9 @@ end
 if ~isempty(out_lesion)
     out_lesion = out_lesion(:);
     for i = 1:length(out_lesion)
+        if isempty(out_lesion{i})
+            continue
+        end
         out.virtual_lesion_analysis.onlyROI(i,:) = out_lesion{i}.onlyROI;  
         out.virtual_lesion_analysis.removeROI(i,:) = out_lesion{i}.removeROI;  
     end

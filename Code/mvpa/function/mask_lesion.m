@@ -1,5 +1,7 @@
 function out_lesion = mask_lesion(xtest,ytest,model,out_train,temporary_file,param)
 
+out_lesion = [];
+
 if strcmp(model,'ridge')
     out_lesion = mask_lesion_ridge(xtest,ytest,model,out_train,temporary_file,param);
 elseif strcmp(model,'lm')

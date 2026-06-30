@@ -1,12 +1,35 @@
 function param = set_params(model,param)
 %% Set Default parameters
 
+if nargin < 2 || isempty(param)
+    param = struct();
+end
+
 if ~isfield(param,'text') || isempty(param.text); param.text = 1; end
 if ~isfield(param,'progress') || isempty(param.progress); param.progress = 1; end
 if ~isfield(param,'savefolds') || isempty(param.savefolds); param.savefolds = 1; end
 if ~isfield(param,'savelarge') || isempty(param.savelarge); param.savelarge = 0; end
 
-if ~isfield(param,'covariates') || isempty(param.covariates); param.covariates = 1; end
+if ~isfield(param,'covariateMode') || isempty(param.covariateMode)
+    if isfield(param,'covariates') && ~isempty(param.covariates)
+        switch param.covariates
+            case 0
+                param.covariateMode = 'none';
+            case 1
+                param.covariateMode = 'residualizeY';
+            case 2
+                param.covariateMode = 'residualizeX';
+            otherwise
+                error('Legacy param.covariates must be 0, 1, or 2.');
+        end
+        param.legacyCovariates = param.covariates;
+    else
+        param.covariateMode = 'auto';
+    end
+end
+if isfield(param,'covariates')
+    param = rmfield(param,'covariates');
+end
 if ~isfield(param,'interp') || isempty(param.interp); param.interp = 0; end
 if ~isfield(param,'scale') || isempty(param.scale); param.scale = 1; end
 if ~isfield(param,'random') || isempty(param.random); param.random = 0; end

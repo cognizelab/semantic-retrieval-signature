@@ -23,7 +23,7 @@ else
     curr_param.groupCV = []; curr_param.stratifyCV = []; curr_param.indexCV = []; curr_param.keepOrder = 0;
 end
 
-index = mat_sample(x,y,[],param.icv,curr_param);
+[index,icv] = mat_sample(x,y,[],param.icv,curr_param);
 
 feature_weight = []; 
 
@@ -34,18 +34,25 @@ for m = 1:numel(param.C)
     % parameter
     clear model_quality*
     parameter = param.C(m);
-    for n = 1:param.icv(2)
+    feature_weight = [];
+    for n = 1:icv(2)
         idx = index(:,n); PV = []; TV = []; PW = [];
-        for k = 1:param.icv(1)
+        fold_values = unique(idx(~isnan(idx)));
+        for k = 1:numel(fold_values)
             % splitting data sets
-            ftest = find(idx==k); ftrain = find(idx~=k);
+            fold_value = fold_values(k);
+            if numel(fold_values) == 1 && fold_value == 0
+                ftest = (1:size(x,1))';
+                ftrain = ftest;
+            else
+                ftest = find(idx==fold_value);
+                ftrain = find(idx~=fold_value & ~isnan(idx));
+            end
             xtest = x(ftest,:); ytest = y(ftest,:); 
             xtrain = x(ftrain,:); ytrain = y(ftrain,:); 
             % feature scaling 
             if param.iscale == 1 
-                vmin = min(xtrain); vmax = max(xtrain); v = vmax-vmin;
-                xtrain = (xtrain - vmin) ./ v;
-                xtest = (xtest - vmin) ./ v;    
+                [xtrain,xtest] = mat_scale(xtrain,xtest);
             end
             % model training
             [out_train,temporary_file] = train_model_svm(xtrain,ytrain,parameter,kk);
@@ -55,7 +62,7 @@ for m = 1:numel(param.C)
             feature_weight = [feature_weight,out_train.feature_weight];
             PV = [PV;out_apply.pv]; TV = [TV;out_apply.tv]; PW = [PW;out_apply.dp];
         end
-        W = mat_assess_classification(logicl(TV),PW,1,param);
+        W = mat_assess_classification(TV,PW,1,param);
         model_quality_out(n,1) = W.accuracy;
         model_quality_out(n,2) = W.AUC;   
     end

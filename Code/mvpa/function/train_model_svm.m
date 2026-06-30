@@ -26,8 +26,13 @@ end
 
 temporary_file = out_svm;
 out_train.model = out_svm;
-out_train.feature_weight = out_svm.Beta;
-out_train.bias = out_svm.Bias;
+try
+    out_train.feature_weight = out_svm.Beta;
+    out_train.bias = out_svm.Bias;
+catch
+    out_train.feature_weight = NaN(size(xtrain,2),1);
+    out_train.bias = NaN;
+end
 
 % SVs = out_svm.SupportVectors; 
 % Alpha = out_svm.Alpha;  

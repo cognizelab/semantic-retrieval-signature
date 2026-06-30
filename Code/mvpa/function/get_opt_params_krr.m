@@ -20,24 +20,30 @@ else
     curr_param.groupCV = []; curr_param.stratifyCV = []; curr_param.indexCV = []; curr_param.keepOrder = 0;    
 end
 
-index = mat_sample(x,y,[],param.icv,curr_param);
+[index,icv] = mat_sample(x,y,[],param.icv,curr_param);
  
 for m = 1:numel(param.lambda)
     % parameter
     clear model_quality*
     parameter = param.lambda(m);
-    for n = 1:param.icv(2)
+    for n = 1:icv(2)
         idx = index(:,n); PV = []; TV = [];
-        for k = 1:param.icv(1)
+        fold_values = unique(idx(~isnan(idx)));
+        for k = 1:numel(fold_values)
             % splitting data sets
-            ftest = find(idx==k); ftrain = find(idx~=k);
+            fold_value = fold_values(k);
+            if numel(fold_values) == 1 && fold_value == 0
+                ftest = (1:size(x,1))';
+                ftrain = ftest;
+            else
+                ftest = find(idx==fold_value);
+                ftrain = find(idx~=fold_value & ~isnan(idx));
+            end
             xtest = x(ftest,:); ytest = y(ftest,:); 
             xtrain = x(ftrain,:); ytrain = y(ftrain,:); 
             % feature scaling 
             if param.iscale == 1 
-                vmin = min(xtrain); vmax = max(xtrain); v = vmax-vmin;
-                xtrain = (xtrain - vmin) ./ v;
-                xtest = (xtest - vmin) ./ v;    
+                [xtrain,xtest] = mat_scale(xtrain,xtest);
             end
             % model training
             out_train = train_model_krr(xtrain,ytrain,parameter);
@@ -76,6 +82,7 @@ else
     f = find(opt_records.model_quality_accuracy(:,1)==max(opt_records.model_quality_accuracy(:,1)));
 end
 
+f = f(1);
 opt_parameter = param.lambda(f);
 
 if param.text == 1
