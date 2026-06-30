@@ -19,25 +19,34 @@ if nargin < 3; thr = 0.1; end
 % Initialize a logical array to mark good features
 fgood = true(1, m);
 
-% Initialize a counter for deleted rows
-r = 0;
+% Initialize removed row indices
+r = [];
+
+if isempty(x)
+    return
+end
 
 % Loop over each feature
 for i = 1:m
-    % If a feature has only one unique value, or the proportion of missing values is more than 10%, then mark it as a bad feature
-    if numel(unique(x(:,i))) == 1 || sum(isnan(x(:,i)) | isinf(x(:,i))) > n * thr % perfentage of cut off
+    curr = x(:,i);
+    finite_curr = curr(isfinite(curr));
+    % If a feature is constant, fully invalid, or has too many invalid values, mark it as bad.
+    if isempty(finite_curr) || numel(unique(finite_curr)) == 1 || sum(~isfinite(curr)) > n * thr
         fgood(i) = false;
     elseif k == 1  % If k is 1, perform interpolation
-        x(:,i) = fillmissing(x(:,i), 'linear');  % You can replace 'linear' with other methods if you want
-    elseif k == 2  % Otherwise, delete all rows with missing values
-        rowsToDelete = isnan(x(:,i)) | isinf(x(:,i));
-        r = r + sum(rowsToDelete);  % Update the counter
-        x(rowsToDelete, :) = [];
+        x(~isfinite(x(:,i)),i) = NaN;
+        x(:,i) = fillmissing(x(:,i), 'linear');
+        x(:,i) = fillmissing(x(:,i), 'nearest');
+        if any(isnan(x(:,i)))
+            medv = median(finite_curr);
+            x(isnan(x(:,i)),i) = medv;
+        end
     end
 end
 
-if r == 0
-    r = [];
+if k == 2
+    r = find(any(~isfinite(x(:,fgood)),2));
+    x(r,:) = [];
 end
 
 % Remove bad features

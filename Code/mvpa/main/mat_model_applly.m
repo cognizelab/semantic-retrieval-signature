@@ -53,15 +53,13 @@ if param.interp > 0
     end
 end
 
-% covariates regression  
-if param.covariates > 0 && ~isempty(ctrain) && ~isempty(ctest) 
-   ctest = c(ftest,:); ctrain = c(ftrain,:); 
-   if param.covariates == 1 
-      [ytrain,ytest] = mat_regress_xy(ctrain,ctest,ytrain,ytest);
-   elseif param.covariates == 2 
-      [xtrain,xtest] = mat_regress_xy(ctrain,ctest,xtrain,xtest);
-   end
-end     
+% covariate handling
+[param.covariateModeResolved, param.covariateModeRequested, ...
+    param.covariateModeApplied] = ...
+    resolve_covariate_mode(model, ytrain, param, ctrain);
+[xtrain,ytrain,xtest,ytest,covariateInfo] = ...
+    apply_covariate_mode(xtrain,ytrain,ctrain,xtest,ytest, ...
+    ctest,param,model);
 
 % feature scaling 
 if param.scale == 1 
@@ -83,20 +81,23 @@ end
 
 Data.xtrain = xtrain; Data.ytrain = ytrain; Data.ctrain = ctrain;
 Data.xtest = xtest; Data.ytest = ytest; Data.ctest = ctest;
+Data.covariateMode = covariateInfo;
 
 %% Model Training & Generalization
 if isa(premodel, 'double') 
     f = find(~isnan(premodel));
     out_apply.pv = xtest(:,f)*premodel(f);
     out_apply.tv = ytest;
+    out_apply = apply_covariate_addback(out_apply,covariateInfo);
 else    
     if strcmp(premodel,'weight')
         % model training  
         [out_train,temporary_file] = train_model(xtrain,ytrain,model,do_parameter,param);
         premodel = out_train.feature_weight;
         % model generalization
-        if ~isempty(xtest) & ~isempty(ytest)
+        if ~isempty(xtest) && ~isempty(ytest)
             out_apply = apply_model(xtest,ytest,model,out_train,temporary_file);
+            out_apply = apply_covariate_addback(out_apply,covariateInfo);
         else
             out_apply = [];
         end
@@ -110,23 +111,22 @@ else
             %
             bootweight(:,n) = out_train.feature_weight;
         end
-        bootmean = nanmean(bootweight');
-        bootste = nanstd(bootweight');
+        bootmean = mean(bootweight, 2, 'omitnan');
+        bootste = std(bootweight, 0, 2, 'omitnan');
         boot_Z = bootmean./bootste;
         boot_p_z = 2 * (1 - normcdf(abs(boot_Z)));
-        premodel = boot_Z';
+        premodel = boot_Z;
         if strcmp(p_type,'p_unc')
-            f = find(boot_p_z>p);
-            premodel(f) = 0;
+            premodel(boot_p_z > p) = 0;
         elseif strcmp(p_type,'FDR')
             a = makeFDR(boot_p_z,p);
-            f = find(boot_p_z>a);
-            premodel(f) = 0;
+            premodel(boot_p_z > a) = 0;
         end
-        if ~isempty(xtest) & ~isempty(ytest)
-            if mean(premodel) ~= 0 
+        if ~isempty(xtest) && ~isempty(ytest)
+            if any(isfinite(premodel) & premodel ~= 0) 
                 out_apply.pv = xtest*premodel;
                 out_apply.tv = ytest;
+                out_apply = apply_covariate_addback(out_apply,covariateInfo);
             else
                 out_apply = [];
                 disp('No significant features were found under the current threshold.');

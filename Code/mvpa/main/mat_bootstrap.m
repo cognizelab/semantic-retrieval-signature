@@ -3,7 +3,7 @@ function [out,bootweight,Haufeweight] = mat_bootstrap(x,y,c,log,out,varargin)
 % - Z.K.X. 2023/10/03
 %---------------------------------------------------------------------------------------------------------------------------------------------------%
 %% default setting 
-N = 10000; PO = 0; opt_parameter = []; doparallel = 0; text = 0; nparpool = 12; Haufe = 0; 
+N = 10000; PO = 0; opt_parameter = []; doparallel = 0; text = 0; nparpool = 12; Haufe = 0; bricks_n = []; 
 
 for i = 1:length(varargin)
     if ischar(varargin{i})
@@ -40,14 +40,13 @@ end
 
 [c, log.data.cgood,f3] = mat_data_filtering(c, 1, 1); 
 
-% covariates regression  
-if log.param.covariates > 0 && ~isempty(c) 
-   if log.param.covariates == 1 
-      y = mat_regress_xy(c,[],y);
-   elseif log.param.covariates == 2 
-      x = mat_regress_xy(c,[],x);
-   end
-end    
+% covariate handling
+[log.param.covariateModeResolved, log.param.covariateModeRequested, ...
+    log.param.covariateModeApplied] = ...
+    resolve_covariate_mode(log.model, y, log.param, c);
+[x,y,~,~,covariateInfo] = apply_covariate_mode(x,y,c,[],[],[], ...
+    log.param,log.model);
+log.covariateMode = covariateInfo;
 
 % feature scaling 
 if log.param.scale == 1 
@@ -58,7 +57,7 @@ end
 if ~isempty(log.param.groupCV) && log.param.samerule == 1
     in = unique(log.param.groupCV); s = size(in);  
 else
-    in = [1:size(x,1)]'; s = size(in);  
+    in = (1:size(x,1))'; s = size(in);
 end
 
 mwb('CLOSEALL'); 
@@ -78,7 +77,7 @@ if doparallel == 0
             bx = x(f,:); by = y(f,:); 
         end
         if log.param.po > 0 && PO == 1
-            [do_parameter,opt_records,param] = get_opt_params(by,by,log.model,log.param);
+            [do_parameter,opt_records,param] = get_opt_params(bx,by,log.model,log.param);
         else
             if ~isempty(opt_parameter)
                 do_parameter = opt_parameter;
@@ -95,6 +94,16 @@ if doparallel == 0
         if Haufe == 1
             w = bootweight(:,n);
             Haufeweight(:,n) = cov(bx)*w/cov(w'*bx');
+            % pred = bx * w;                     
+            % Nn = size(bx,1);
+            % 
+            % Xc = bsxfun(@minus, bx, mean(bx,1));
+            % sc = pred - mean(pred);
+            % 
+            % haufe_cov = (Xc' * sc) / (Nn - 1);          % Cov(X, s)
+            % pred_var  = (sc' * sc) / (Nn - 1);          % Var(s)
+            % 
+            % Haufeweight(:,n) = haufe_cov / pred_var;    % Haufe pattern
         elseif Haufe == 2
             w = bootweight(:,n);
             Haufeweight(:,n) = fast_haufe(bx, w, bricks_n);
@@ -116,13 +125,13 @@ else
     if text == 1
         parfor_progress(N);  
         parfor n = 1:N
-            [bootweight{n},Haufeweight{n}] = boot_parallel(in,s,x,y,log,PO,opt_parameter,out,Haufe); 
+            [bootweight{n},Haufeweight{n}] = boot_parallel(in,s,x,y,log,PO,opt_parameter,out,Haufe,bricks_n); 
             parfor_progress; 
         end
         parfor_progress(0);  
     else
         parfor n = 1:N
-            [bootweight{n},Haufeweight{n}] = boot_parallel(in,s,x,y,log,PO,opt_parameter,out,Haufe); 
+            [bootweight{n},Haufeweight{n}] = boot_parallel(in,s,x,y,log,PO,opt_parameter,out,Haufe,bricks_n); 
         end        
     end
     bootweight = cell2mat(bootweight);
@@ -152,26 +161,26 @@ else
 end
 
 %% p value - type two
-bootmean = nanmean(bootweight');
-bootste = nanstd(bootweight');
+bootmean = mean(bootweight, 2, 'omitnan');
+bootste = std(bootweight, 0, 2, 'omitnan');
 boot_Z = bootmean./bootste;
 boot_p_z = 2 * (1 - normcdf(abs(boot_Z)));
 
-out.boot_Z = boot_Z'; out.boot_p_z = boot_p_z'; out.bootste = bootste'; out.bootste_N = N;
+out.boot_Z = boot_Z; out.boot_p_z = boot_p_z; out.bootste = bootste; out.bootste_N = N;
 
 if Haufe > 0
-    bootmean = nanmean(Haufeweight');
-    bootste = nanstd(Haufeweight');
+    bootmean = mean(Haufeweight, 2, 'omitnan');
+    bootste = std(Haufeweight, 0, 2, 'omitnan');
     boot_Z = bootmean./bootste;
     boot_p_z = 2 * (1 - normcdf(abs(boot_Z)));
     
-    out.boot_haufe_Z = boot_Z'; out.boot_haufe_p_z = boot_p_z'; out.bootste_haufe = bootste'; 
+    out.boot_haufe_Z = boot_Z; out.boot_haufe_p_z = boot_p_z; out.bootste_haufe = bootste;
 end
 
 end
 
 %% ===================================================================================
-function [bootweight,Haufeweight] = boot_parallel(in,s,x,y,log,PO,opt_parameter,out,Haufe)   
+function [bootweight,Haufeweight] = boot_parallel(in,s,x,y,log,PO,opt_parameter,out,Haufe,bricks_n)   
     f = in(ceil(max(s)*rand(max(s),1)));   
     if ~isempty(log.param.groupCV) && log.param.samerule == 1 
         bx = []; by = [];
@@ -183,7 +192,7 @@ function [bootweight,Haufeweight] = boot_parallel(in,s,x,y,log,PO,opt_parameter,
         bx = x(f,:); by = y(f,:); 
     end
     if log.param.po > 0 && PO == 1
-        [do_parameter,opt_records,param] = get_opt_params(by,by,log.model,log.param);
+        [do_parameter,opt_records,param] = get_opt_params(bx,by,log.model,log.param);
     else
         if ~isempty(opt_parameter)
             do_parameter = opt_parameter;
@@ -200,6 +209,16 @@ function [bootweight,Haufeweight] = boot_parallel(in,s,x,y,log,PO,opt_parameter,
     if Haufe == 1
         w = bootweight;
         Haufeweight(:,1) = cov(bx)*w/cov(w'*bx');
+        % pred = bx * w;                     
+        % Nn = size(bx,1);
+        % 
+        % Xc = bsxfun(@minus, bx, mean(bx,1));
+        % sc = pred - mean(pred);
+        % 
+        % haufe_cov = (Xc' * sc) / (Nn - 1);          % Cov(X, s)
+        % pred_var  = (sc' * sc) / (Nn - 1);          % Var(s)
+        % 
+        % Haufeweight(:,1) = haufe_cov / pred_var;    % Haufe pattern        
     elseif Haufe == 2
         w = bootweight(:,1);
         Haufeweight(:,1) = fast_haufe(bx, w, bricks_n);

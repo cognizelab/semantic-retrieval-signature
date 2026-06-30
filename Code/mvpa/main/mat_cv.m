@@ -4,8 +4,8 @@ function [out,log] = mat_cv(x,y,c,model,cv,param)
 %% Input
 %  (1) x: subjects * features of interest (double) 
 %  (2) y: subjects * target variable 
-%  (3) c: subjects * covariates to be controled
-%                 <regress covariates (e.g. head motion) from y (target variable)>
+%  (3) c: subjects * covariates to be controlled
+%                 <covariate handling is controlled by param.covariateMode>
 %  (4) model: model selection
 %             # regression
 %             >>> 'lm', linear regression --- [doc model_lm] 
@@ -39,10 +39,18 @@ function [out,log] = mat_cv(x,y,c,model,cv,param)
 %                                   >>> 0 = NO (default)     
 %          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 %          <b> data manipulation
-%             -- param.covariates, if regress out the covariates
-%                                   >>> 0 = NO; 
-%                                   >>> 1 = regress out covariates from y (default); 
-%                                   >>> 2 = regress out covariates from x 
+%             -- param.covariateMode, covariate handling strategy
+%                                   >>> 'auto' = regression uses 'residualizeY';
+%                                                classification uses 'residualizeX' (default)
+%                                   >>> 'none' = do not use covariates
+%                                   >>> 'residualizeY' = regress covariates from y
+%                                   >>> 'residualizeX' = regress covariates from x
+%                                   >>> 'residualizeXY' = regress covariates from both x and y
+%                                   >>> 'includeCovariates' = append covariates to x
+%                                   >>> 'residualizeY_addBack' = train on y residuals
+%                                                and add the covariate baseline back to predictions
+%                                   Note: y-residualization modes are for regression.
+%                                   Classification uses x-side control by default.
 %             -- param.scale, if scale the variates
 %                                   >>> 1 = YES (default)
 %                                   >>> 0 = NO  
@@ -151,11 +159,23 @@ else
     if numel(cv)<2; cv(2) = 1; end
 end
 
+if cv(2) == 0
+    param.keepOrder = 1;
+    cv(2) = 1;
+end
+
 log.ocv = cv;
 
 %% -------------------------------------------------- Data Manipulation ------------------------------------------------------------------
 %% Data Filtering
 log.model = model; ID = [];
+opt_parameter = [];
+opt_records = [];
+out_train = cell(0);
+out_apply = cell(0);
+out_assess = cell(0);
+out_assess_full = cell(1,cv(2));
+out_lesion = cell(0);
 
 if param.interp > 0
     [x, log.data.xgood,f1] = mat_data_filtering(x, param.interp, 0.1); y(f1,:) = []; 
@@ -170,7 +190,12 @@ if param.interp > 0
         c(f1,:) = []; c(f2,:) = [];
     end
     
-    [c, log.data.cgood,f3] = mat_data_filtering(c, 1, 1); 
+    if ~isempty(c)
+        [c, log.data.cgood,f3] = mat_data_filtering(c, 1, 1);
+    else
+        log.data.cgood = [];
+        f3 = [];
+    end
     
     if ~isempty(param.ID) && size(param.ID,1) ~= size(x,1)
         param.ID(f1,:) = []; param.ID(f2,:) = [];
@@ -189,20 +214,29 @@ if param.interp > 0
     end
 end
 
-if ~isempty(find(isnan(x) | isinf(x))) 
-    warning(['The current data x contains NaN or Inf. Please clean the data before allowing the program to run. Alternatively, you can set param.interp to 1, which will allow the program to automatically interpolate these variables.']);
+if any(isnan(x(:)) | isinf(x(:))) 
+    warning('The current data x contains NaN or Inf. Please clean the data before allowing the program to run. Alternatively, you can set param.interp to 1, which will allow the program to automatically interpolate these variables.');
     return
-elseif ~isempty(find(isnan(y) | isinf(y)))
+elseif any(isnan(y(:)) | isinf(y(:)))
     warning('The current data y contains NaN or Inf. Please clean the data before allowing the program to run. Alternatively, you can set param.interp to 1, which will allow the program to automatically interpolate these variables.');
     return    
-elseif ~isempty(find(isnan(c) | isinf(c)))
+elseif any(isnan(c(:)) | isinf(c(:)))
     warning('The current data c contains NaN or Inf. Please clean the data before allowing the program to run. Alternatively, you can set param.interp to 1, which will allow the program to automatically interpolate these variables.');
     return    
 end
 
+[param.covariateModeResolved, param.covariateModeRequested, ...
+    param.covariateModeApplied] = ...
+    resolve_covariate_mode(model, y, param, c);
+log.covariateMode.requested = param.covariateModeRequested;
+log.covariateMode.resolved = param.covariateModeResolved;
+log.covariateMode.applied = param.covariateModeApplied;
+
 %% Data Packing
 [index,cv] = mat_sample(x,y,c,cv,param);
 log.folds.cv = cv; log.folds.index = index; 
+log.ocv = cv;
+param.nSubjectCV = size(x, 1);
 
 %% Data Permutation
 if param.random == 1 
@@ -236,13 +270,26 @@ for n = 1:cv(2)
     if param.random == 2
         y = Y(randperm(size(Y,1)),:);
     end 
-    idx = index(:,n); PV = []; TV = []; PW = []; id = [];       
+    idx = index(:,n); id = [];
+    fold_values = unique(idx(~isnan(idx)));
+    if isempty(fold_values)
+        error('mat_cv:InvalidCVIndex','No valid fold labels were found in the cross-validation index.');
+    end
+    n_folds = numel(fold_values);
 % ------------------------------------------------------------------------------------------------------
 %% Outer CV ★★★
 % ------------------------------------------------------------------------------------------------------
-    for k = 1:length(unique(idx))
+    for k = 1:n_folds
         % data allocation
-        ftest = find(idx==k); ftrain = find(idx~=k); param.ftest = ftest; param.ftrain = ftrain;
+        fold_value = fold_values(k);
+        if n_folds == 1 && fold_value == 0
+            ftest = (1:size(x,1))';
+            ftrain = ftest;
+        else
+            ftest = find(idx==fold_value);
+            ftrain = find(idx~=fold_value & ~isnan(idx));
+        end
+        param.ftest = ftest; param.ftrain = ftrain;
         xtest = x(ftest,:); ytest = y(ftest,:); 
         xtrain = x(ftrain,:); ytrain = y(ftrain,:); 
         if ~isempty(param.ID); id = [id;param.ID(ftest,:)]; log.ID{k,n} = param.ID(ftest,:); end
@@ -250,17 +297,17 @@ for n = 1:cv(2)
             f1 = randperm(size(ytest,1)); ytest = ytest(f1,:);               
             f2 = randperm(size(ytrain,1)); ytrain = ytrain(f2,:); 
         end                
-        % covariates regression  
-        if param.covariates > 0 && ~isempty(c) 
-           ctest = c(ftest,:); ctrain = c(ftrain,:); 
-           if param.covariates == 1 
-               if param.random == 3; ctrain = ctrain(f2,:); ctest = ctest(f2,:); end
-              [ytrain,ytest] = mat_regress_xy(ctrain,ctest,ytrain,ytest);
-           elseif param.covariates == 2 
-               if param.random == 3; ctrain = ctrain(f1,:); ctest = ctest(f1,:); end
-              [xtrain,xtest] = mat_regress_xy(ctrain,ctest,xtrain,xtest);
-           end
-        end     
+        % fold-wise covariate handling
+        ctrain = []; ctest = [];
+        if ~isempty(c)
+           ctest = c(ftest,:); ctrain = c(ftrain,:);
+           if param.random == 3; ctest = ctest(f1,:); ctrain = ctrain(f2,:); end
+        end
+        [xtrain,ytrain,xtest,ytest,covariateInfo] = ...
+            apply_covariate_mode(xtrain,ytrain,ctrain,xtest,ytest, ...
+            ctest,param,model);
+        log.covariateMode.fold{k,n}.applied = covariateInfo.applied;
+        log.covariateMode.fold{k,n}.addBack = covariateInfo.addBack;
         % feature scaling 
         if param.scale == 1 
             [xtrain,xtest] = mat_scale(xtrain,xtest); 
@@ -270,38 +317,49 @@ for n = 1:cv(2)
             [opt_parameter{k,n},opt_records{k,n},param] = get_opt_params(xtrain,ytrain,model,param);
             do_parameter = opt_parameter{k,n};
         else
-            opt_parameter = []; opt_records = [];
             do_parameter = get_default_params(model,param);
         end   
         % model training  
         [out_train{k,n},temporary_file] = train_model(xtrain,ytrain,model,do_parameter,param);
         % model generalization
         out_apply{k,n} = apply_model(xtest,ytest,model,out_train{k,n},temporary_file);
-        % data concatenation
-        TV = [TV;out_apply{k,n}.tv]; PV = [PV;out_apply{k,n}.pv]; PW = [PW;out_apply{k,n}.dp];              
+        out_apply{k,n} = apply_covariate_addback(out_apply{k,n},covariateInfo);
+        out_apply{k,n}.subject_index = ftest(:);
+        out_apply{k,n}.n_subject = size(x, 1);
         % model evaluation (fold level)
         out_assess{k,n} = assess_model(out_apply{k,n},model,param);
         % 'virtual lesion' analysis
+        out_lesion{k,n} = [];
         if isfield(param,'mask') && ~isempty(param.mask)
-            result_lesion_analysis = mask_lesion(xtest,ytest,model,out_train{k,n},temporary_file,param);
-            if ~isempty(result_lesion_analysis); out_lesion{k,n} = result_lesion_analysis; else; out_lesion = []; end;
-        else
-            out_lesion = [];
+            ytest_lesion = ytest;
+            if covariateInfo.addBack && ~isempty(covariateInfo.yTestResidual)
+                ytest_lesion = covariateInfo.yTestResidual;
+            end
+            result_lesion_analysis = mask_lesion(xtest,ytest_lesion,model,out_train{k,n},temporary_file,param);
+            if ~isempty(result_lesion_analysis); out_lesion{k,n} = result_lesion_analysis; end
         end
         % loop labels
         if  param.text == 1; disp(['--------->>> Repetition: ',num2str(n),'; Folds: ',num2str(k)]); end 
-        if  param.progress == 1; mwb(label, k/cv(1)); end
+        if  param.progress == 1; mwb(label, k/n_folds); end
         if  param.text == 1
-            disp(['The accuracy in current fold: ',num2str(out_assess{k,n}.accuracy)]);
+            disp(['The accuracy in current fold: ',num2str(get_display_accuracy(out_assess{k,n}))]);
             disp('-------------------------------------');
         end
     end 
 % ------------------------------------------------------------------------------------------------------
 %% Model Assessment ★★★
 % ------------------------------------------------------------------------------------------------------   
+    [TV,PV,PW] = collect_ordered_outcomes(out_apply(:,n), size(x, 1));
     out_assess_full{n} = assess_model([TV,PV,PW],model,param);
     if  param.progress == 1; mwb('Total Progress', n/cv(2)); mwb(label,'Close'); end
-    if ~isempty(param.ID); ID(:,n) = id; end
+    if ~isempty(param.ID)
+        if isnumeric(id) || islogical(id)
+            ID(:,n) = id;
+        else
+            if ~iscell(ID); ID = cell(1,cv(2)); end
+            ID{n} = id;
+        end
+    end
 end
 
 %% -------------------------------------------------- Result Report ------------------------------------------------------------------
@@ -309,3 +367,18 @@ end
 out = organize_results(model,opt_parameter,opt_records,out_train,out_apply,out_assess,out_assess_full,param,out_lesion);
 out.ID = ID; log.param = param; 
 if  param.progress == 1; mwb('CloseAll'); end
+
+end
+
+function value = get_display_accuracy(out_assess)
+
+value = NaN;
+if isfield(out_assess,'accuracy')
+    value = out_assess.accuracy;
+elseif isfield(out_assess,'W') && isfield(out_assess.W,'accuracy')
+    value = out_assess.W.accuracy;
+elseif isfield(out_assess,'B') && isfield(out_assess.B,'accuracy')
+    value = out_assess.B.accuracy;
+end
+
+end

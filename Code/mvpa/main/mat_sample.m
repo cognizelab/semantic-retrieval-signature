@@ -4,8 +4,8 @@ function [index,cv] = mat_sample(x,y,c,cv,param)
 %% Input
 %  (1) x: subjects * features of interest (double) 
 %  (2) y: subjects * target variable 
-%  (3) c: subjects * covariates to be controled
-%                 <regress covariates (e.g. head motion) from y (target variable)>
+%  (3) c: subjects * covariates to be controlled
+%                 <covariate handling is controlled by param.covariateMode>
 %  (4) param: corresponding parameters
 %             -- param.groupCV, numerical label for group-based cross-validation
 %             -- param.stratifyCV, numerical label for stratified cross-validation 
@@ -23,7 +23,7 @@ function [index,cv] = mat_sample(x,y,c,cv,param)
 
 if isfield(param,'indexCV') && ~isempty(param.indexCV)
     index = param.indexCV; 
-    cv(1) = numel(unique(index(:,1)));
+    cv(1) = numel(unique(index(~isnan(index(:,1)),1)));
     cv(2) = size(index,2);
     return
 end
@@ -31,15 +31,26 @@ end
 if ~isfield(param,'groupCV') || isempty(param.groupCV)
     K = [1:size(x,1)]';
 else
-    K = param.groupCV;
+    K = param.groupCV(:);
 end
 
 k = unique(K);
 
+if numel(cv) < 2
+    cv(2) = 1;
+end
+if cv(2) == 0
+    param.keepOrder = 1;
+    cv(2) = 1;
+end
+cv(1) = max(1,min(round(cv(1)),numel(k)));
+cv(2) = max(1,round(cv(2)));
+
 if ~isfield(param,'keepOrder') || param.keepOrder ~= 1
     if ~isfield(param,'stratifyCV') || isempty(param.stratifyCV)
+        indexc = zeros(length(k),cv(2));
         for i = 1:cv(2)
-            indexc(:,i) = crossvalind('Kfold',length(k),cv(1)); 
+            indexc(:,i) = local_kfold_index(length(k),cv(1)); 
         end
     else
         [~,~,indexc] = group_sample(param.stratifyCV,cv(1),cv(2));
@@ -47,6 +58,7 @@ if ~isfield(param,'keepOrder') || param.keepOrder ~= 1
     if length(k) == length(K)
         index = indexc;
     else
+        index = zeros(length(K),cv(2));
         for i = 1:cv(2)
             for j = 1:numel(k)
                 f = find(K==k(j));
@@ -55,15 +67,18 @@ if ~isfield(param,'keepOrder') || param.keepOrder ~= 1
         end 
     end
 else
-    [a,b] = sort(y,'descend');
-    for i = 1:cv(1)
-        p = i:cv(1):numel(y);
-        index(b(p),1) = i;
+    [~,b] = sort(y(:,1),'descend');
+    index = zeros(numel(y(:,1)),cv(2));
+    for n = 1:cv(2)
+        for i = 1:cv(1)
+            p = i:cv(1):numel(y(:,1));
+            index(b(p),n) = i;
+        end
     end
 end
 
 if cv(1) == 1
-    index = index - 1;
+    index(:) = 0;
 end
 
 end
@@ -134,7 +149,8 @@ end
 n = min(n);
 
 for i = 1:size(S,1)
-     G(i).Sample = randsample(G(i).Subjects,n);
+     p = randperm(length(G(i).Subjects),n);
+     G(i).Sample = G(i).Subjects(p);
      m(i) = length(G(i).Sample);
 end
 
@@ -142,9 +158,23 @@ m = min(m);
 
 for n = 1:rn
     for i = 1:length(G) 
-        curr = crossvalind('Kfold',G(i).Number,skn);
+        curr = local_kfold_index(G(i).Number,skn);
         index(G(i).Subjects,n) = curr;
     end
 end
+
+end
+
+function idx = local_kfold_index(n,k)
+
+if n == 0
+    idx = zeros(0,1);
+    return
+end
+
+k = max(1,min(round(k),n));
+idx = repmat(1:k,1,ceil(n/k));
+idx = idx(1:n)';
+idx = idx(randperm(n));
 
 end

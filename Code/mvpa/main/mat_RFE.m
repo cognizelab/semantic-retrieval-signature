@@ -4,8 +4,8 @@ function out = mat_RFE(x,y,c,model,cv,param,varargin)
 %% Input
 %  (1) x: subjects * features of interest (double) 
 %  (2) y: subjects * target variable 
-%  (3) c: subjects * covariates to be controled
-%                 <regress covariates (e.g. head motion) from y (target variable)>
+%  (3) c: subjects * covariates to be controlled
+%                 <covariate handling is controlled by param.covariateMode>
 %  (4) model: model selection (see 'mat_cv.m')
 %  (5) cv: cross-validation setting (see 'mat_cv.m')
 %  (6) param: corresponding parameters (see 'mat_cv.m')
@@ -47,6 +47,9 @@ function out = mat_RFE(x,y,c,model,cv,param,varargin)
 n_removal = 10000;
 n_finalfeat = 50000;
 init_feat = 0;
+if nargin < 6 || isempty(param)
+    param = struct();
+end
 
 for i = 1:length(varargin)
     if ischar(varargin{i})
@@ -66,6 +69,7 @@ for i = 1:length(varargin)
 end
 
 data_dim = size(x,2);  
+n_finalfeat = max(1,min(n_finalfeat,data_dim));
 mask = zeros(data_dim,1);
 orig_indx = 1:data_dim;  
 out.descending_indx = [];
@@ -81,41 +85,46 @@ param.text = 0;
 if init_feat == 1 
     
     n_initremoval = data_dim - n_initialfeat;    % calculate how many features to remove
+    n_initremoval = max(0,min(n_initremoval,data_dim - n_finalfeat));
     
     str = sprintf('Initial training with all features...');
     fprintf('%s\n', str);
     
     [OUT,log] = mat_cv(dat_loop,y,c,model,cv,param);
 
-    try
-        out.cv_accuracy(i,1) = OUT.model_quality.accuracy; 
-    catch
-        out.cv_accuracy(i,1) = OUT.model_quality.accuracy_correlation; 
-    end    
+    out.cv_accuracy(i,1) = get_rfe_accuracy(OUT);
 
     out.n_features(i,1) = size(dat_loop,2);    
-    w = mean(OUT.feature_weight,2);
+    w = local_nanmean(OUT.feature_weight,2);
  
-    w = abs(w);
-    [~, out.ascending_idx{i}] = sort(w);
-    ordered_orig_indx = orig_indx(out.ascending_idx{i});
-    out.descending_indx = [ordered_orig_indx(1:n_initremoval) out.descending_indx];  % keeping ordered indices
-    out.removed_index{i+1} = ordered_orig_indx(1:n_initremoval);
-    
-    % removal
-    remove_idx = out.ascending_idx{i}(1:n_initremoval);
-    dat_loop(:,remove_idx) = [];  
-    
-    orig_indx(out.ascending_idx{i}(1:n_initremoval)) = []; % clear removed original indices
-    out.whkeep_orginal_idx{i+1} = orig_indx;    % save kept original indices
-    
-    data_dim = data_dim - n_initremoval;  % reduce the dimension
-    
-    fprintf('\n');
-    str = sprintf('Eliminated %d features.', n_initremoval);
-    fprintf('%s\n', str);
-    
-    i = i+1;
+    if n_initremoval == 0
+        out.removed_index{i+1} = [];
+        out.whkeep_orginal_idx{i+1} = orig_indx;
+        i = i + 1;
+        data_dim = size(dat_loop,2);
+    else
+ 
+        w = abs(w);
+        [~, out.ascending_idx{i}] = sort(w);
+        ordered_orig_indx = orig_indx(out.ascending_idx{i});
+        out.descending_indx = [ordered_orig_indx(1:n_initremoval) out.descending_indx];  % keeping ordered indices
+        out.removed_index{i+1} = ordered_orig_indx(1:n_initremoval);
+        
+        % removal
+        remove_idx = out.ascending_idx{i}(1:n_initremoval);
+        dat_loop(:,remove_idx) = [];  
+        
+        orig_indx(out.ascending_idx{i}(1:n_initremoval)) = []; % clear removed original indices
+        out.whkeep_orginal_idx{i+1} = orig_indx;    % save kept original indices
+        
+        data_dim = data_dim - n_initremoval;  % reduce the dimension
+        
+        fprintf('\n');
+        str = sprintf('Eliminated %d features.', n_initremoval);
+        fprintf('%s\n', str);
+        
+        i = i+1;
+    end
     
 end
 
@@ -127,14 +136,10 @@ while 1
     [OUT,log] = mat_cv(dat_loop,y,c,model,cv,param);
     
     % collecting outputs (weights, accuracy) from training   
-    try
-        out.cv_accuracy(i,1) = OUT.model_quality.accuracy; 
-    catch
-        out.cv_accuracy(i,1) = OUT.model_quality.accuracy_correlation; 
-    end
+    out.cv_accuracy(i,1) = get_rfe_accuracy(OUT);
 
     out.n_features(i,1) = size(dat_loop,2);    
-    w = mean(OUT.feature_weight,2);
+    w = local_nanmean(OUT.feature_weight,2);
     
     if out.n_features(i) <= n_finalfeat, break, end
     
@@ -174,7 +179,7 @@ for i=1:length(out.cv_accuracy)
 end
  
 feature_weight = mask;
-feature_weight(out.whkeep_orginal_idx{end}) = mean(OUT.feature_weight,2);
+feature_weight(out.whkeep_orginal_idx{end}) = local_nanmean(OUT.feature_weight,2);
 out.smallestnfeat_weight = feature_weight;
 
 [max_acc, max_idx] = max(out.cv_accuracy);
@@ -198,7 +203,34 @@ for i=1:max_idx
 end
 
 feature_weight = mask;
-feature_weight(out.whkeep_orginal_idx{max_idx}) = mean(OUT.feature_weight,2);
+feature_weight(out.whkeep_orginal_idx{max_idx}) = local_nanmean(OUT.feature_weight,2);
 out.bestaccuracy_weight = feature_weight;
+
+end
+
+function accuracy = get_rfe_accuracy(OUT)
+
+if isfield(OUT.model_quality,'accuracy')
+    accuracy = local_nanmean(OUT.model_quality.accuracy(:),1);
+elseif isfield(OUT.model_quality,'accuracy_correlation')
+    accuracy = local_nanmean(OUT.model_quality.accuracy_correlation(:),1);
+elseif isfield(OUT.model_quality,'AUC')
+    accuracy = local_nanmean(OUT.model_quality.AUC(:),1);
+else
+    accuracy = NaN;
+end
+
+end
+
+function m = local_nanmean(x,dim)
+
+if nargin < 2
+    dim = 1;
+end
+ok = isfinite(x);
+x(~ok) = 0;
+den = sum(ok,dim);
+m = sum(x,dim) ./ den;
+m(den == 0) = NaN;
 
 end
