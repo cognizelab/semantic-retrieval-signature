@@ -1,6 +1,6 @@
 # Introduction
 
-The semantic retrieval signature described in "Adaptive coordination between competing cognitive systems enables flexible retrieval of semantic knowledge" is stored in this repository.
+The semantic retrieval signature described in "Model-based semantic distance reveals adaptive coordination of distinct cognitive systems in flexible knowledge retrieval" is stored in this repository.
 
 Through the integration of computational linguistics with machine learning, this study identified a robust and generalizable semantic retrieval signature that is sensitive to word-pair semantic distance variations, where larger semantic distances correspond to increased controlled retrieval demands. This signature is specific to semantic processing rather than general executive control.
 
@@ -26,5 +26,5 @@ Information on the core brain regions (ROIs) within the semantic retrieval signa
 
 # Reference
 
-> Kaixiang, Z., Xinyu, L., Jonathan, S., Elizabeth, J. & Vatansever, D. (2026) Adaptive coordination between competing cognitive systems enables flexible retrieval of semantic knowledge.
+> Kaixiang, Z., Xinyu, L., Jonathan, S., Elizabeth, J. & Vatansever, D. (2026) Model-based semantic distance reveals adaptive coordination of distinct cognitive systems in flexible knowledge retrieval.
 
