@@ -26,5 +26,5 @@ Information on the core brain regions (ROIs) within the semantic distance signat
 
 # Reference
 
-> Kaixiang, Z., Xinyu, L., Jonathan, S., Elizabeth, J. & Vatansever, D. (2026) Model-based semantic distance reveals adaptive coordination of distinct cognitive systems in flexible knowledge retrieval.
+> Kaixiang, Z., Xinyu, L., Jonathan, S., Elizabeth, J. & Vatansever, D. (2026). Model-based semantic distance reveals adaptive coordination of distinct cognitive systems in flexible knowledge retrieval.
 
