@@ -27,11 +27,12 @@ existing analysis references do not break.
 
 ## Key Materials And Figure Overview
 
-The figures below provide the visual overview used in the earlier repository
-README. For full methodological details, figure legends, and result
-interpretation, please refer to the main manuscript, the Supplementary
-Information, and the online repository at
-https://github.com/cognizelab/semantic-distance-signature.
+This section highlights the main research outputs provided with the repository:
+the whole-brain semantic distance signature, demonstration analyses for
+trial-level prediction, and ROI-level functional-system decomposition. Full
+methodological details, figure legends, and result interpretation are provided
+in the main manuscript, the Supplementary Information, and the project
+repository at https://github.com/cognizelab/semantic-distance-signature.
 
 ### 1. Whole-Brain Topography Of Semantic Retrieval Demands
 
@@ -113,11 +114,11 @@ Each demo should create these MATLAB workspace variables:
 - `h`: figure handle returned by `mat_plot_correlation`.
 
 The T-PLS demo also computes Haufe-transformed bootstrap weights and stores them
-in `Haufeweight`. The SVR demo skips permutation testing by default so reviewers
-can quickly confirm that the code runs; set `runPermutation = true` in
-`regression_svr.m` to run the optional permutation test.
+in `Haufeweight`. The SVR demo skips permutation testing by default for a quick
+installation check; set `runPermutation = true` in `regression_svr.m` to run
+the optional permutation test.
 
-For review-speed demos, the scripts use `demoBootstrapN = 100`. The manuscript
+For the quick demos, the scripts use `demoBootstrapN = 100`. The manuscript
 analyses used 5,000 bootstrap/permutation iterations where reported.
 
 On the tested Windows 11 / MATLAB R2023b system, the T-PLS demo completed in
