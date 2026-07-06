@@ -25,6 +25,38 @@ controlled retrieval demands.
 The repository intentionally keeps these paths stable so manuscript links and
 existing analysis references do not break.
 
+## Key Materials And Figure Overview
+
+The figures below provide the visual overview used in the earlier repository
+README. For full methodological details, figure legends, and result
+interpretation, please refer to the main manuscript, the Supplementary
+Information, and the online repository at
+https://github.com/cognizelab/semantic-distance-signature.
+
+### 1. Whole-Brain Topography Of Semantic Retrieval Demands
+
+[![Fig-1-1.jpg](https://i.postimg.cc/MHkHPcQr/Fig-1-1.jpg)](https://postimg.cc/hzrKhtM9)
+
+The whole-brain semantic distance signature is provided in CIFTI and NIFTI
+formats in `Semantic distance signature/`. The word-pair stimuli used to
+construct the semantic distance estimates are provided in `Word-pair stimulus/`.
+
+### 2. Trial-Level Prediction Of Semantic Distance
+
+[![B.png](https://i.postimg.cc/9Q5TZgmV/B.png)](https://postimg.cc/4mPmT5HF)
+
+The MATLAB examples in `Code/example/` demonstrate the T-PLS and SVR prediction
+workflow on a small demo dataset. Full manuscript-scale prediction analyses
+depend on restricted-access participant-level fMRI response estimates described
+in the manuscript.
+
+### 3. Functional-System Decomposition
+
+[![C.jpg](https://i.postimg.cc/VNMN45Tr/C.jpg)](https://postimg.cc/jWxKSqRt)
+
+Information on the core ROIs and functional-system assignments within the
+semantic distance signature is provided in `ROIs/`.
+
 ## System Requirements
 
 ### Software
@@ -156,8 +188,5 @@ distance signature.
 
 ## License
 
-Project-authored code and documentation in this repository are released under
-the GNU General Public License v3.0. See `LICENSE`.
-
-Bundled third-party code keeps its original copyright and license notices. See
-`THIRD_PARTY_LICENSES.md` for the third-party license boundary.
+This repository is released under the GNU General Public License v3.0. See
+`LICENSE`.
