@@ -1,30 +1,40 @@
-%% set up toolbox  
-cd('Code/example');
-addpath(genpath('Code/mvpa'));  
+%% T-PLS regression demo for the semantic distance signature repository
+
+% Resolve paths so the script works from the repository root or this folder.
+scriptDir = fileparts(mfilename('fullpath'));
+if isempty(scriptDir)
+    scriptDir = pwd;
+end
+repoRoot = fullfile(scriptDir, '..', '..');
+addpath(genpath(fullfile(repoRoot, 'Code', 'mvpa')));
 
 %% load data
-clc; clear;
-load('data_demo.mat');
+clc; clearvars -except scriptDir repoRoot;
+load(fullfile(scriptDir, 'data_demo.mat'));
 
 x = X; % input features
-y = Y; % target variate 
-c = []; % covariates 
+y = Y; % target variable
+c = []; % covariates
 
-%% run mvpa
-model = 'tpls'; % apply T-PLS algorithm
+%% run MVPA
+model = 'tpls'; % thresholded partial least squares
+cv = []; % leave-one-subject-out cross-validation through param.groupCV
 
-cv = [ ]; % leave-one-subject-out cross-validation
+param.groupCV = subj; % subject ID for grouped cross-validation
+param.compvec = 1:25; % number of components to test
+param.threshvec = 0.05:0.05:1; % percentage of strongest features retained
+param.icv = [5 3]; % 5-fold inner CV, repeated 3 times
 
-param.groupCV = subj; % identify subject ID
-param.compvec = [1:25]; % identify number of components to be retained (default = [1:25])
-param.threshvec = [0.05:0.05:1]; % identify what percentage of the most important features should be retained (default = [0.05:0.05:1])
-param.icv = [5 3]; % set the number of inner cross-validation iterations for parameter optimization (5-fold cross-validation; executed 3 times)
+[out, log] = mat_cv(x, y, c, model, cv, param);
 
-[out,log] = mat_cv(x,y,c,model,cv,param); % perform main cross-validation
+% The manuscript analyses used N = 5000. The demo default is smaller so that
+% reviewers can quickly verify installation and expected outputs.
+demoBootstrapN = 100;
+[out, bootweight, Haufeweight] = mat_bootstrap( ...
+    x, y, c, log, out, 'N', demoBootstrapN, ...
+    'opt_parameter', out.parameter_suggest, 'Haufe');
 
-[out,bootweight] = mat_bootstrap(x,y,c,log,out,'N',5000,'opt_parameter',out.parameter_suggest,'Haufe'); % perform bootstrap and Haufe transformation
-
-out = mat_report_correlation(out,log); % report results
+out = mat_report_correlation(out, log);
 
 opt.bins = 3;
-h = mat_plot_correlation(out,opt); % display results 
+h = mat_plot_correlation(out, opt);

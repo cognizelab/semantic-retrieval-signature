@@ -1,31 +1,45 @@
-%% set up toolbox  
-cd('Code/example');
-addpath(genpath('Code/mvpa'));  
+%% SVR regression demo for the semantic distance signature repository
+
+% Resolve paths so the script works from the repository root or this folder.
+scriptDir = fileparts(mfilename('fullpath'));
+if isempty(scriptDir)
+    scriptDir = pwd;
+end
+repoRoot = fullfile(scriptDir, '..', '..');
+addpath(genpath(fullfile(repoRoot, 'Code', 'mvpa')));
 
 %% load data
-clc; clear;
-load('data_demo.mat');
+clc; clearvars -except scriptDir repoRoot;
+load(fullfile(scriptDir, 'data_demo.mat'));
 
 x = X; % input features
-y = Y; % target variate 
-c = []; % covariates 
+y = Y; % target variable
+c = []; % covariates
 
-%% run mvpa
-model = 'svr'; % apply SVR algorithm
+%% run MVPA
+model = 'svr'; % support vector regression
+cv = []; % leave-one-subject-out cross-validation through param.groupCV
 
-cv = [ ]; % leave-one-subject-out cross-validation
+param.groupCV = subj; % subject ID for grouped cross-validation
+param.po = 0; % do not perform parameter optimization
+param.C = []; % use MATLAB default C parameter for SVR
 
-param.groupCV = subj; % identify subject ID
-param.po = 0; % do not perform parameter optimization (use default parameter in SVR)
-param.C = [ ]; % use default C parameter in SVR
+[out, log] = mat_cv(x, y, c, model, cv, param);
 
-[out,log] = mat_cv(x,y,c,model,cv,param); % perform main cross-validation
+% The manuscript analyses used N = 5000 where bootstrap/permutation tests were
+% reported. The demo default is smaller for quick reviewer verification.
+demoBootstrapN = 100;
+[out, bootweight] = mat_bootstrap( ...
+    x, y, c, log, out, 'N', demoBootstrapN, 'opt_parameter', 1);
 
-[out,bootweight] = mat_bootstrap(x,y,c,log,out,'N',5000,'opt_parameter',1); % perform bootstrap
+% Permutation testing is optional and can be slow even for a demo dataset.
+runPermutation = false;
+if runPermutation
+    demoPermutationN = 100;
+    out = mat_permutation(x, y, c, log, out, 'N', demoPermutationN);
+end
 
-out = mat_permutation(x,y,c,log,out,'N',5000); % perform permutation (optional, very time consuming)
-
-out = mat_report_correlation(out,log); % report results
+out = mat_report_correlation(out, log);
 
 opt.bins = 3;
-h = mat_plot_correlation(out,opt); % display results 
+h = mat_plot_correlation(out, opt);

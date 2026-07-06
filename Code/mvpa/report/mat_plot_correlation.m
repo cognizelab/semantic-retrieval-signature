@@ -103,22 +103,34 @@ if isfield(out,'boot_Z') && ~isempty(out.boot_Z)
     % z 
     if ~isempty(pz)
         mark_pz = zeros(1,numel(a)); mark_pz(out.boot_p_z<=pz) = 1; mark_pz = mark_pz(b);
-        fp = find(a'>0 & mark_pz==1); kp = (a(max(fp)) + a(max(fp)+1))/2;
-        fn = find(a'<0 & mark_pz==1); kn = (a(min(fn)) + a(min(fn)-1))/2;
-        line([1 numel(a)],[kp kp],'LineStyle','--','Color','r','LineWidth',1);
-        line([1 numel(a)],[kn kn],'LineStyle','--','Color','b','LineWidth',1);
-        text(numel(a)+1, kp, 'FDR, p-z < 0.05', 'HorizontalAlignment', 'left');
-        text(numel(a)+1, kn, 'FDR, p-z < 0.05', 'HorizontalAlignment', 'left');
+        fp = find(a'>0 & mark_pz==1);
+        if ~isempty(fp) && max(fp) < numel(a)
+            kp = (a(max(fp)) + a(max(fp)+1))/2;
+            line([1 numel(a)],[kp kp],'LineStyle','--','Color','r','LineWidth',1);
+            text(numel(a)+1, kp, 'FDR, p-z < 0.05', 'HorizontalAlignment', 'left');
+        end
+        fn = find(a'<0 & mark_pz==1);
+        if ~isempty(fn) && min(fn) > 1
+            kn = (a(min(fn)) + a(min(fn)-1))/2;
+            line([1 numel(a)],[kn kn],'LineStyle','--','Color','b','LineWidth',1);
+            text(numel(a)+1, kn, 'FDR, p-z < 0.05', 'HorizontalAlignment', 'left');
+        end
     end
     % ratio
     if ~isempty(pr)
         mark_pr = zeros(1,numel(a)); mark_pr(out.boot_p_ratio<=pr) = 1; mark_pr = mark_pr(b);
-        fp = find(a'>0 & mark_pr==1); kp = (a(max(fp)) + a(max(fp)+1))/2;
-        fn = find(a'<0 & mark_pr==1); kn = (a(min(fn)) + a(min(fn)-1))/2;
-        line([1 numel(a)],[kp kp],'LineStyle',':','Color','r','LineWidth',1);
-        line([1 numel(a)],[kn kn],'LineStyle',':','Color','b','LineWidth',1);
-        text(numel(a)+1, kp, 'FDR, p-ratio < 0.05', 'HorizontalAlignment', 'left');
-        text(numel(a)+1, kn, 'FDR, p-ratio < 0.05', 'HorizontalAlignment', 'left');
+        fp = find(a'>0 & mark_pr==1);
+        if ~isempty(fp) && max(fp) < numel(a)
+            kp = (a(max(fp)) + a(max(fp)+1))/2;
+            line([1 numel(a)],[kp kp],'LineStyle',':','Color','r','LineWidth',1);
+            text(numel(a)+1, kp, 'FDR, p-ratio < 0.05', 'HorizontalAlignment', 'left');
+        end
+        fn = find(a'<0 & mark_pr==1);
+        if ~isempty(fn) && min(fn) > 1
+            kn = (a(min(fn)) + a(min(fn)-1))/2;
+            line([1 numel(a)],[kn kn],'LineStyle',':','Color','b','LineWidth',1);
+            text(numel(a)+1, kn, 'FDR, p-ratio < 0.05', 'HorizontalAlignment', 'left');
+        end
     end
     set(gca,'linewidth', 1.5, 'fontsize', 18, 'tickdir', 'out');
     ax =gca; ax.TickLength = [0.03 0.03];
