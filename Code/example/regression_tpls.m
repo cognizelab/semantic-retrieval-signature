@@ -1,16 +1,36 @@
 %% T-PLS regression demo for the semantic distance signature repository
 
-% Resolve paths so the script works from the repository root or this folder.
+% Resolve paths so the script works from semantic-distance-signature\Code or
+% from this example folder.
 scriptDir = fileparts(mfilename('fullpath'));
 if isempty(scriptDir)
     scriptDir = pwd;
 end
-repoRoot = fullfile(scriptDir, '..', '..');
-addpath(genpath(fullfile(repoRoot, 'Code', 'mvpa')));
+codeRoot = fullfile(scriptDir, '..');
+addpath(genpath(fullfile(codeRoot, 'mvpa')));
 
 %% load data
-clc; clearvars -except scriptDir repoRoot;
-load(fullfile(scriptDir, 'data_demo.mat'));
+clc;
+dataFile = fullfile(scriptDir, 'data_demo.mat');
+if ~isfile(dataFile)
+    error('Demo data file not found: %s', dataFile);
+end
+
+demoData = load(dataFile);
+requiredVars = {'X', 'Y', 'subj'};
+missingVars = requiredVars(~isfield(demoData, requiredVars));
+if ~isempty(missingVars)
+    error('Demo data file is missing required variable(s): %s', strjoin(missingVars, ', '));
+end
+
+X = demoData.X;
+Y = demoData.Y;
+subj = demoData.subj;
+if size(X, 1) ~= numel(Y) || size(X, 1) ~= numel(subj)
+    error('Imported demo data dimensions do not match: rows(X) must equal numel(Y) and numel(subj).');
+end
+Y = Y(:);
+subj = subj(:);
 
 x = X; % input features
 y = Y; % target variable
@@ -27,8 +47,8 @@ param.icv = [5 3]; % 5-fold inner CV, repeated 3 times
 
 [out, log] = mat_cv(x, y, c, model, cv, param);
 
-% The manuscript analyses used N = 5000. The demo default is smaller so that
-% reviewers can quickly verify installation and expected outputs.
+% The manuscript analyses used N = 5000. The demo default is smaller for a
+% quick installation check.
 demoBootstrapN = 100;
 [out, bootweight, Haufeweight] = mat_bootstrap( ...
     x, y, c, log, out, 'N', demoBootstrapN, ...

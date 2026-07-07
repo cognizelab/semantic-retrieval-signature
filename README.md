@@ -74,10 +74,11 @@ semantic distance signature is provided in `ROIs/`.
 
 ## Installation
 
-Clone the repository and add the MATLAB MVPA code to the path:
+After setting the MATLAB current folder to `semantic-distance-signature\Code`,
+add the MVPA code to the path:
 
 ```matlab
-addpath(genpath(fullfile('Code', 'mvpa')));
+addpath(genpath('mvpa'));
 ```
 
 Typical install time on a normal desktop is under 5 minutes after MATLAB is
@@ -87,15 +88,17 @@ no MATLAB package installation is required.
 ## Demo
 
 The demonstration uses the small dataset in `Code/example/data_demo.mat`.
-Run the examples from the repository root:
+In MATLAB, set the current folder to `semantic-distance-signature\Code`, then
+run:
 
 ```matlab
-run(fullfile('Code', 'example', 'regression_tpls.m'))
-run(fullfile('Code', 'example', 'regression_svr.m'))
+run(fullfile('example', 'regression_tpls.m'))
+run(fullfile('example', 'regression_svr.m'))
 ```
 
-The scripts add `Code/mvpa` to the MATLAB path automatically, so they can also
-be launched directly from `Code/example`.
+The scripts add `mvpa/` to the MATLAB path automatically and import
+`example/data_demo.mat` after checking that the required variables `X`, `Y`, and
+`subj` are present and have matching observation counts.
 
 ### Expected Demo Output
 
@@ -116,7 +119,7 @@ For the quick demos, the scripts use `demoBootstrapN = 100`. The manuscript
 analyses used 5,000 bootstrap/permutation iterations where reported.
 
 On the tested Windows 11 / MATLAB R2023b system, the T-PLS demo completed in
-approximately 6 seconds and the SVR demo completed in approximately 5 seconds,
+approximately 10 seconds and the SVR demo completed in approximately 9 seconds,
 excluding MATLAB application startup time.
 
 ## Running On Your Own Data
