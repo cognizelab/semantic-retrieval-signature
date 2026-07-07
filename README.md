@@ -22,25 +22,20 @@ controlled retrieval demands.
   semantic distance signature.
 - `Word-pair stimulus/`: the 3-AFC word-pair stimuli used in the task.
 
-The repository intentionally keeps these paths stable so manuscript links and
-existing analysis references do not break.
-
 ## Key Materials And Figure Overview
 
 This section highlights the main research outputs provided with the repository:
 the whole-brain semantic distance signature, demonstration analyses for
 trial-level prediction, and ROI-level functional-system decomposition. Full
 methodological details, figure legends, and result interpretation are provided
-in the main manuscript, the Supplementary Information, and the project
-repository at https://github.com/cognizelab/semantic-distance-signature.
+in the main manuscript and the Supplementary Information.
 
 ### 1. Whole-Brain Topography Of Semantic Retrieval Demands
 
 [![Fig-1-1.jpg](https://i.postimg.cc/MHkHPcQr/Fig-1-1.jpg)](https://postimg.cc/hzrKhtM9)
 
 The whole-brain semantic distance signature is provided in CIFTI and NIFTI
-formats in `Semantic distance signature/`. The word-pair stimuli used to
-construct the semantic distance estimates are provided in `Word-pair stimulus/`.
+formats in `Semantic distance signature/`.
 
 ### 2. Trial-Level Prediction Of Semantic Distance
 
@@ -49,7 +44,8 @@ construct the semantic distance estimates are provided in `Word-pair stimulus/`.
 The MATLAB examples in `Code/example/` demonstrate the T-PLS and SVR prediction
 workflow on a small demo dataset. Full manuscript-scale prediction analyses
 depend on restricted-access participant-level fMRI response estimates described
-in the manuscript.
+in the manuscript. The word-pair stimuli used to construct the semantic distance
+estimates are provided in `Word-pair stimulus/`.
 
 ### 3. Functional-System Decomposition
 
@@ -81,8 +77,7 @@ semantic distance signature is provided in `ROIs/`.
 Clone the repository and add the MATLAB MVPA code to the path:
 
 ```matlab
-repoRoot = 'C:\Users\Lenovo\Desktop\NC\semantic-distance-signature';
-addpath(genpath(fullfile(repoRoot, 'Code', 'mvpa')));
+addpath(genpath(fullfile('Code', 'mvpa')));
 ```
 
 Typical install time on a normal desktop is under 5 minutes after MATLAB is
@@ -111,7 +106,6 @@ Each demo should create these MATLAB workspace variables:
 - `log`: model settings, cross-validation folds, retained observations/features,
   and covariate handling metadata.
 - `bootweight`: bootstrapped feature weights.
-- `h`: figure handle returned by `mat_plot_correlation`.
 
 The T-PLS demo also computes Haufe-transformed bootstrap weights and stores them
 in `Haufeweight`. The SVR demo skips permutation testing by default for a quick
@@ -156,36 +150,26 @@ to inspect and reuse the semantic distance signature. Full end-to-end
 reproduction of every manuscript result also depends on restricted-access fMRI
 data and external tools described in the manuscript:
 
-- Qunex/HCP minimal preprocessing for fMRI preprocessing.
-- GLMsingle for single-trial fMRI response estimates.
-- Static word embeddings from Hugging Face Hub, including Word2Vec,
-  FastText, GloVe, ConceptNet Numberbatch v19.08, and RWSGwn.
-- A custom embedding toolkit for word-vector extraction.
-- T-PLS for whole-brain predictive modelling.
-- OPNMF for functional system decomposition.
-- NiMARE for meta-analytic decoding.
-- UMAP for two-dimensional projection of high-dimensional ROI features.
+- [Qunex](https://qunex.yale.edu/) / HCP minimal preprocessing for fMRI
+  preprocessing.
+- [GLMsingle](https://github.com/cvnlab/GLMsingle) for single-trial fMRI
+  response estimates.
+- Static word embeddings from the [Hugging Face Hub](https://huggingface.co/),
+  including Word2Vec, FastText, GloVe, ConceptNet Numberbatch v19.08, and RWSGwn.
+- A custom [Embedding toolkit](https://github.com/lc451574367/Embedding) for
+  word-vector extraction.
+- [T-PLS](https://github.com/sangillee/TPLSm) for whole-brain predictive
+  modelling.
+- [OPNMF](https://github.com/cognizelab/fmatrix-OPNMF) for functional system
+  decomposition.
+- [NiMARE](https://nimare.readthedocs.io/en/stable/) for meta-analytic decoding.
+- [UMAP](https://umap-learn.readthedocs.io/en/latest/) for two-dimensional
+  projection of high-dimensional ROI features.
 
 Semantic distances in the primary analysis were computed as
 `1 - cosine similarity` between probe and target word vectors. The best
 behavioural fit was obtained with ConceptNet Numberbatch sparse word vectors
 retaining the strongest 48% of weights.
-
-## Data Availability
-
-Raw participant-level fMRI data are not included in this repository because of
-institutional ethics and consent restrictions. Qualified researchers can request
-restricted access to individual-specific brain maps from the corresponding
-author listed in the manuscript. Group-level signature maps, ROI definitions,
-stimuli, and demo code are provided here.
-
-## Code Availability
-
-The repository accompanies the manuscript Code Availability statement. External
-software used in the study includes Qunex, GLMsingle, the embedding toolkit,
-T-PLS, OPNMF, NiMARE, and UMAP. This repository contains the custom code and
-group-level files needed to run the supplied MVPA demos and reuse the semantic
-distance signature.
 
 ## License
 
