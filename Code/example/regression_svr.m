@@ -1,20 +1,35 @@
 %% SVR regression demo for the semantic distance signature repository
 
-% Resolve paths so the script works from semantic-distance-signature\Code or
-% from this example folder.
-scriptDir = fileparts(mfilename('fullpath'));
-if isempty(scriptDir)
-    scriptDir = pwd;
-end
-codeRoot = fullfile(scriptDir, '..');
-addpath(genpath(fullfile(codeRoot, 'mvpa')));
-
 %% load data
 clc;
-dataFile = fullfile(scriptDir, 'data_demo.mat');
-if ~isfile(dataFile)
-    error('Demo data file not found: %s', dataFile);
+scriptFile = mfilename('fullpath');
+candidateDataFiles = {};
+if ~isempty(scriptFile)
+    candidateDataFiles{end+1} = fullfile(fileparts(scriptFile), 'data_demo.mat');
 end
+candidateDataFiles{end+1} = fullfile(pwd, 'example', 'data_demo.mat');
+candidateDataFiles{end+1} = fullfile(pwd, 'data_demo.mat');
+
+dataFile = '';
+for ii = 1:numel(candidateDataFiles)
+    if isfile(candidateDataFiles{ii})
+        dataFile = candidateDataFiles{ii};
+        break
+    end
+end
+if isempty(dataFile)
+    error('Demo data file not found. Expected Code\\example\\data_demo.mat. Checked: %s', strjoin(candidateDataFiles, '; '));
+end
+
+exampleDir = fileparts(dataFile);
+codeRoot = fileparts(exampleDir);
+if ~isfolder(fullfile(codeRoot, 'mvpa')) && isfolder(fullfile(pwd, 'mvpa'))
+    codeRoot = pwd;
+end
+if ~isfolder(fullfile(codeRoot, 'mvpa'))
+    error('MVPA folder not found. Set the MATLAB current folder to semantic-distance-signature\\Code or run the script from Code\\example.');
+end
+addpath(genpath(fullfile(codeRoot, 'mvpa')));
 
 demoData = load(dataFile);
 requiredVars = {'X', 'Y', 'subj'};
