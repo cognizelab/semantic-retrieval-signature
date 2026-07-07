@@ -93,17 +93,9 @@ if doparallel == 0
         bootweight(:,n) = out_train.feature_weight;
         if Haufe == 1
             w = bootweight(:,n);
-            Haufeweight(:,n) = cov(bx)*w/cov(w'*bx');
-            % pred = bx * w;                     
-            % Nn = size(bx,1);
-            % 
-            % Xc = bsxfun(@minus, bx, mean(bx,1));
-            % sc = pred - mean(pred);
-            % 
-            % haufe_cov = (Xc' * sc) / (Nn - 1);          % Cov(X, s)
-            % pred_var  = (sc' * sc) / (Nn - 1);          % Var(s)
-            % 
-            % Haufeweight(:,n) = haufe_cov / pred_var;    % Haufe pattern
+            % Previous dense implementation, retained for reference:
+            % Haufeweight(:,n) = cov(bx)*w/cov(w'*bx');
+            Haufeweight(:,n) = compute_haufe_pattern(bx, w);
         elseif Haufe == 2
             w = bootweight(:,n);
             Haufeweight(:,n) = fast_haufe(bx, w, bricks_n);
@@ -208,21 +200,37 @@ function [bootweight,Haufeweight] = boot_parallel(in,s,x,y,log,PO,opt_parameter,
     bootweight = out_train.feature_weight;
     if Haufe == 1
         w = bootweight;
-        Haufeweight(:,1) = cov(bx)*w/cov(w'*bx');
-        % pred = bx * w;                     
-        % Nn = size(bx,1);
-        % 
-        % Xc = bsxfun(@minus, bx, mean(bx,1));
-        % sc = pred - mean(pred);
-        % 
-        % haufe_cov = (Xc' * sc) / (Nn - 1);          % Cov(X, s)
-        % pred_var  = (sc' * sc) / (Nn - 1);          % Var(s)
-        % 
-        % Haufeweight(:,1) = haufe_cov / pred_var;    % Haufe pattern        
+        % Previous dense implementation, retained for reference:
+        % Haufeweight(:,1) = cov(bx)*w/cov(w'*bx');
+        Haufeweight(:,1) = compute_haufe_pattern(bx, w);
     elseif Haufe == 2
         w = bootweight(:,1);
         Haufeweight(:,1) = fast_haufe(bx, w, bricks_n);
     else
         Haufeweight = [];
     end
+end
+
+function pattern = compute_haufe_pattern(data, weights)
+    weights = weights(:);
+    pred = data * weights;
+    n_samples = size(data, 1);
+
+    if n_samples < 2
+        pattern = NaN(size(weights));
+        return
+    end
+
+    Xc = bsxfun(@minus, data, mean(data, 1));
+    sc = pred - mean(pred);
+
+    haufe_cov = (Xc' * sc) / (n_samples - 1);
+    pred_var = (sc' * sc) / (n_samples - 1);
+
+    if ~isfinite(pred_var) || pred_var == 0
+        pattern = NaN(size(weights));
+        return
+    end
+
+    pattern = haufe_cov / pred_var;
 end

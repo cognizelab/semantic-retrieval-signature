@@ -39,5 +39,5 @@ manuscript-scale analyses, use the parameter settings reported in the main
 README and manuscript Methods.
 
 On the tested Windows 11 / MATLAB R2023b system, the T-PLS demo completed in
-approximately 10 seconds and the SVR demo completed in approximately 9 seconds,
+approximately 26 seconds and the SVR demo completed in approximately 15 seconds,
 excluding MATLAB application startup time.

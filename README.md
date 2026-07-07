@@ -119,7 +119,7 @@ For the quick demos, the scripts use `demoBootstrapN = 100`. The manuscript
 analyses used 5,000 bootstrap/permutation iterations where reported.
 
 On the tested Windows 11 / MATLAB R2023b system, the T-PLS demo completed in
-approximately 10 seconds and the SVR demo completed in approximately 9 seconds,
+approximately 26 seconds and the SVR demo completed in approximately 15 seconds,
 excluding MATLAB application startup time.
 
 ## Running On Your Own Data
