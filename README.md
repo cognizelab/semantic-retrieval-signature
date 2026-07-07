@@ -166,11 +166,6 @@ data and external tools described in the manuscript:
 - [UMAP](https://umap-learn.readthedocs.io/en/latest/) for two-dimensional
   projection of high-dimensional ROI features.
 
-Semantic distances in the primary analysis were computed as
-`1 - cosine similarity` between probe and target word vectors. The best
-behavioural fit was obtained with ConceptNet Numberbatch sparse word vectors
-retaining the strongest 48% of weights.
-
 ## License
 
 This repository is released under the GNU General Public License v3.0. See
